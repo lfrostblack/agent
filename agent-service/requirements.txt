@@ -1,0 +1,7 @@
+# Claude Agent SDK (drives the bundled Node-based Claude Code CLI).
+# Pinned to the version this build was verified against.
+claude-agent-sdk==0.2.110
+
+# Slack Bolt (async) + the aiohttp-based Socket Mode adapter.
+slack-bolt>=1.21.2
+aiohttp>=3.9
