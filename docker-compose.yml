@@ -1,0 +1,50 @@
+# Local end-to-end topology.
+#
+# This mirrors the intended Railway deployment:
+#   - postgres        : managed Postgres in prod
+#   - ticket-backend  : web service (exposes 8000, has /health)   -- built out in step 4
+#   - agent-service   : always-on worker (no ports; Socket Mode outbound websocket)
+#
+# For the current build (steps 1-2) only agent-service is functional. The other
+# two are scaffolded so the full stack comes up cleanly and later steps slot in.
+#
+# Usage:
+#   cp agent-service/.env.example  agent-service/.env   && edit
+#   cp ticket-backend/.env.example ticket-backend/.env  && edit
+#   docker compose up --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tickets
+      POSTGRES_PASSWORD: tickets
+      POSTGRES_DB: tickets
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tickets"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ticket-backend:
+    build: ./ticket-backend
+    env_file: ./ticket-backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  agent-service:
+    build: ./agent-service
+    env_file: ./agent-service/.env
+    # No published ports: Socket Mode is an outbound websocket. This runs as an
+    # always-on worker, so keep it restarting on failure.
+    restart: unless-stopped
+    depends_on:
+      - ticket-backend
+
+volumes:
+  pgdata:
